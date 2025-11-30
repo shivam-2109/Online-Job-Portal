@@ -142,7 +142,3 @@ Job Seeker	seeker@demo	seek123
 This project is licensed under the MIT License.
 See the LICENSE file for details.
 
-🏁 Author
-
-Md Sufiyan
-GitHub: sufiyan16s
