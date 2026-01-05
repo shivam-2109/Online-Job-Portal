@@ -80,6 +80,9 @@ Git & GitHub
 
 JavaFX Maven Plugin
 
+## 📁 Project Structure
+
+
 labouriq/
 ├── pom.xml
 ├── LICENSE
@@ -139,6 +142,8 @@ labouriq/
             │
             └── images/
                 └── branding & screenshots
+
+
 
 🚀 Build & Run Instructions (GUVI Reviewers)
 ✅ Prerequisites
