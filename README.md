@@ -80,9 +80,7 @@ Git & GitHub
 
 JavaFX Maven Plugin
 
-📁 Project Structure
 labouriq/
-│
 ├── pom.xml
 ├── LICENSE
 ├── README.md
@@ -90,7 +88,7 @@ labouriq/
 ├── FOLDER_STRUCTURE.md
 │
 ├── database/
-│   └── labouriq.db          # Auto-created by DBInit
+│   └── labouriq.db              # Auto-created by DBInit
 │
 └── src/
     └── main/
