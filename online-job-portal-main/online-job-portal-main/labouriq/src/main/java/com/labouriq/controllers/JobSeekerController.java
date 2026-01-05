@@ -1,46 +1,137 @@
 package com.labouriq.controllers;
 
+import com.labouriq.dao.ApplicationDAO;
+import com.labouriq.dao.JobDAO;
+import com.labouriq.model.Application;
+import com.labouriq.model.Job;
+import com.labouriq.util.Session;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
+
+import java.util.List;
 
 public class JobSeekerController {
 
-    @FXML private StackPane contentPane;
-    @FXML private ListView<String> recommendationList;
-    @FXML private Label recCount;
+    @FXML private TableView<Job> jobsTable;
+    @FXML private TableView<Application> applicationsTable;
+
+    private final JobDAO jobDAO = new JobDAO();
+    private final ApplicationDAO applicationDAO = new ApplicationDAO();
 
     @FXML
     public void initialize() {
-        loadRecommendations();
+        loadJobs();
+        loadMyApplications();
     }
 
-    private void loadRecommendations() {
-        // TODO: Wire Recommendation Engine / JobDAO - placeholder sample
-        recommendationList.getItems().clear();
-        recommendationList.getItems().addAll(
-                "Software Engineer — 2 days ago",
-                "Construction Worker — 1 day ago",
-                "Site Supervisor — 3 days ago"
-        );
-        recCount.setText(recommendationList.getItems().size() + " recommendations");
+    // 🔍 REQUIRED BY FXML
+    @FXML
+    private void showSearch() {
+        loadJobs();
+    }
+
+    private void showError(String msg) {
+        new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK).showAndWait();
+    }
+
+
+    private void loadJobs() {
+        try {
+            List<Job> jobs = jobDAO.findAllOpenJobs();
+            jobsTable.getItems().setAll(jobs);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML
-    private void onRefresh() {
-        loadRecommendations();
+    private void applyJob() {
+        Job selected = jobsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            alert("Select a job first");
+            return;
+        }
+
+        try {
+            boolean success = applicationDAO.applyJob(
+                    new Application(selected.getId(), Session.getUserId())
+            );
+
+            alert(success ? "Applied successfully" : "Already applied");
+            loadMyApplications();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            alert("Application failed");
+        }
+    }
+
+    private void loadMyApplications() {
+        try {
+            applicationsTable.getItems()
+                    .setAll(applicationDAO.getMyApplications(Session.getUserId()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void alert(String msg) {
+        new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK).showAndWait();
+    }
+
+
+    @FXML
+    private void showApplications() {
+        try {
+            FXRouter.goTo("applications");
+        } catch (Exception e) {
+            e.printStackTrace();
+            alert("Unable to open applications page");
+        }
+    }
+
+    @FXML
+    private void showSaved() {
+        try {
+            FXRouter.goTo("saved_jobs"); // or whatever fxml you use
+        } catch (Exception e) {
+            e.printStackTrace();
+            alert("Unable to open saved jobs");
+        }
+    }
+
+    @FXML
+    private void showProfile() {
+        try {
+            FXRouter.goTo("profile");
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Unable to open profile page");
+        }
     }
 
     @FXML
     private void onLogout() {
-        Stage stage = (Stage) contentPane.getScene().getWindow();
-        FXRouter.goToLogin(stage);
+        try {
+            Session.logout();          // clear session
+            FXRouter.goTo("login");    // go back to login
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Logout failed");
+        }
     }
 
-    @FXML private void showSearch() {}
-    @FXML private void showApplications() {}
-    @FXML private void showProfile() {}
-    @FXML private void showSaved() {}
-    @FXML private void showRecommendations() {}
+    @FXML
+    private void onRefresh() {
+        try {
+            loadJobs();   // refresh job list
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Unable to refresh jobs");
+        }
+    }
+
+
+
+
 }

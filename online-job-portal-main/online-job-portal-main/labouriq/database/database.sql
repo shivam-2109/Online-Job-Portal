@@ -1,62 +1,51 @@
--- database/database.sql
-PRAGMA foreign_keys = ON;
+CREATE DATABASE IF NOT EXISTS labouriq_db;
+USE labouriq_db;
 
+-- ================= USERS =================
 CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT NOT NULL UNIQUE,
-  email TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
-  role TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                       id INT AUTO_INCREMENT PRIMARY KEY,
+                       full_name VARCHAR(100) NOT NULL,
+                       email VARCHAR(100) UNIQUE NOT NULL,
+                       password_hash VARCHAR(64) NOT NULL,
+                       role ENUM('ADMIN', 'EMPLOYER', 'JOBSEEKER') NOT NULL,
+                       resume_path VARCHAR(255),
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ================= JOBS =================
 CREATE TABLE IF NOT EXISTS jobs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  employer_id INTEGER,
-  title TEXT,
-  description TEXT,
-  location TEXT,
-  salary TEXT,
-  status TEXT DEFAULT 'OPEN',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(employer_id) REFERENCES users(id)
+                      id INT AUTO_INCREMENT PRIMARY KEY,
+                      employer_id INT NOT NULL,
+                      title VARCHAR(150) NOT NULL,
+                      location VARCHAR(100) NOT NULL,
+                      salary VARCHAR(50),
+                      description TEXT,
+                      status ENUM('OPEN', 'CLOSED') DEFAULT 'OPEN',
+                      posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                      FOREIGN KEY (employer_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- ================= APPLICATIONS =================
 CREATE TABLE IF NOT EXISTS applications (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  job_id INTEGER,
-  seeker_id INTEGER,
-  resume TEXT,
-  cover_letter TEXT,
-  status TEXT DEFAULT 'PENDING',
-  applied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(job_id) REFERENCES jobs(id),
-  FOREIGN KEY(seeker_id) REFERENCES users(id)
+                              id INT AUTO_INCREMENT PRIMARY KEY,
+                              job_id INT NOT NULL,
+                              seeker_id INT NOT NULL,
+                              status ENUM('PENDING', 'SHORTLISTED', 'REJECTED') DEFAULT 'PENDING',
+                              applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                              FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+                              FOREIGN KEY (seeker_id) REFERENCES users(id) ON DELETE CASCADE,
+                              UNIQUE(job_id, seeker_id)
 );
 
--- add resume_path to applications (if not present)
-ALTER TABLE applications ADD COLUMN resume_path TEXT;
--- messages table
+-- ================= MESSAGES =================
 CREATE TABLE IF NOT EXISTS messages (
-                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                        sender_id INTEGER,
-                                        receiver_id INTEGER,
-                                        content TEXT,
-                                        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                                        read_flag INTEGER DEFAULT 0,
-                                        FOREIGN KEY(sender_id) REFERENCES users(id),
-                                        FOREIGN KEY(receiver_id) REFERENCES users(id)
+                          id INT AUTO_INCREMENT PRIMARY KEY,
+                          sender_id INT NOT NULL,
+                          receiver_id INT NOT NULL,
+                          message TEXT NOT NULL,
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                          FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                          FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-
--- demo admin user (email: admin@demo, password: admin123)
-INSERT OR IGNORE INTO users (username, email, password, role)
-VALUES ('admin', 'admin@demo', 'admin123', 'ADMIN');
-
--- demo employer (optional)
-INSERT OR IGNORE INTO users (username, email, password, role)
-VALUES ('employer1', 'employer@demo', 'emp123', 'EMPLOYER');
-
--- demo job seeker
-INSERT OR IGNORE INTO users (username, email, password, role)
-VALUES ('seeker1', 'seeker@demo', 'seek123', 'JOBSEEKER');
+CREATE INDEX idx_chat ON messages(sender_id, receiver_id);

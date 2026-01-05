@@ -1,98 +1,134 @@
 package com.labouriq.controllers;
 
-
-
 import com.labouriq.dao.UserDAO;
-import com.labouriq.model.User;
+import javafx.animation.TranslateTransition;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.control.*;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.*;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.IOException;
 
-/**
- * SignupController - handles the signup form and creates users via UserDAO.
- *
- * Note: This uses plain-text passwords for demo. Mark TODO to hash passwords before production.
- */
 public class SignupController {
 
+    // ===================== FXML BINDINGS =====================
     @FXML private TextField nameField;
     @FXML private TextField emailField;
     @FXML private PasswordField passwordField;
-    @FXML private ChoiceBox<String> roleChoice;
     @FXML private CheckBox termsCheck;
+    @FXML private ToggleGroup userTypeGroup;
     @FXML private Button signupButton;
     @FXML private Label messageLabel;
 
     private final UserDAO userDAO = new UserDAO();
 
+    // ===================== SIGNUP ACTION =====================
     @FXML
-    public void initialize() {
-        // default selection if not set in FXML
-        if (roleChoice.getValue() == null) roleChoice.setValue("JOBSEEKER");
-    }
+    private void onSignUp(ActionEvent event) {
 
-    @FXML
-    private void onSignUp() {
-        // clear previous messages
-        messageLabel.setText("");
+        String name = nameField.getText().trim();
+        String email = emailField.getText().trim();
+        String password = passwordField.getText().trim();
 
-        String name = nameField.getText() != null ? nameField.getText().trim() : "";
-        String email = emailField.getText() != null ? emailField.getText().trim() : "";
-        String password = passwordField.getText() != null ? passwordField.getText() : "";
-        String role = roleChoice.getValue();
+        // 1️⃣ Get selected user type
+        ToggleButton selectedToggle =
+                (ToggleButton) userTypeGroup.getSelectedToggle();
 
-        // Basic validation
-        if (name.isEmpty()) { messageLabel.setText("Enter your full name."); return; }
-        if (email.isEmpty() || !email.contains("@")) { messageLabel.setText("Enter a valid email."); return; }
-        if (password.length() < 6) { messageLabel.setText("Password must be at least 6 characters."); return; }
-        if (!termsCheck.isSelected()) { messageLabel.setText("You must agree to the terms."); return; }
+        if (selectedToggle == null) {
+            showError("Please select Job Seeker or Employer.");
+            return;
+        }
 
-        // Create user model and call DAO
-        User u = new User();
-        u.setUsername(name);
-        u.setEmail(email);
-        u.setPassword(password); // TODO: hash for production
-        u.setRole(role);
+        // Convert UI role → DB role
+        String role = selectedToggle.getText().equalsIgnoreCase("Employer")
+                ? "EMPLOYER"
+                : "JOBSEEKER";
 
+        // 2️⃣ Validation
+        if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
+            showError("All fields are required.");
+            shake(signupButton);
+            return;
+        }
+
+        if (password.length() < 6) {
+            showError("Password must be at least 6 characters.");
+            shake(passwordField);
+            return;
+        }
+
+        if (!termsCheck.isSelected()) {
+            showError("You must accept terms & conditions.");
+            shake(termsCheck);
+            return;
+        }
+
+        // 3️⃣ Save user to DB (hashed password)
         try {
-            User created = userDAO.create(u);
-            if (created != null && created.getId() > 0) {
-                // success -> show info and redirect to login
-                Alert info = new Alert(Alert.AlertType.INFORMATION,
-                        "Account created successfully. Please login.", ButtonType.OK);
-                info.showAndWait();
-                goToLogin();
-            } else {
-                messageLabel.setText("Failed to create account (duplicate email?).");
+            boolean success =
+                    userDAO.createUser(name, email, password, role);
+
+            if (!success) {
+                showError("Email already exists.");
+                return;
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            messageLabel.setText("Error: " + ex.getMessage());
+
+            showSuccess("Account created successfully!");
+            goToLogin(event);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("System error. Please try again.");
         }
     }
 
+    // ===================== NAVIGATION =====================
     @FXML
-    private void onBackToLogin() {
-        goToLogin();
+    private void onBackToLogin(ActionEvent event) {
+        goToLogin(event);
     }
 
-    private void goToLogin() {
+    private void goToLogin(ActionEvent event) {
         try {
-            Parent root = FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
-            Stage stage = (Stage) signupButton.getScene().getWindow();
-            stage.getScene().setRoot(root);
-            stage.setTitle("WorkNearMe - Login");
+            Parent root =
+                    FXMLLoader.load(getClass().getResource("/fxml/login.fxml"));
+
+            Stage stage =
+                    (Stage) ((Node) event.getSource()).getScene().getWindow();
+
+            stage.setScene(new Scene(root));
+            stage.setTitle("LabourIQ - Login");
+            stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
-            // fallback: show alert
-            Alert err = new Alert(Alert.AlertType.ERROR, "Unable to load Login page.", ButtonType.OK);
-            err.showAndWait();
         }
+    }
+
+    // ===================== UI HELPERS =====================
+    private void showError(String msg) {
+        messageLabel.setText(msg);
+        messageLabel.setStyle("-fx-text-fill:#e74c3c;");
+        messageLabel.setVisible(true);
+    }
+
+    private void showSuccess(String msg) {
+        messageLabel.setText(msg);
+        messageLabel.setStyle("-fx-text-fill:#2ecc71;");
+        messageLabel.setVisible(true);
+    }
+
+    private void shake(Node node) {
+        TranslateTransition t =
+                new TranslateTransition(Duration.millis(50), node);
+        t.setByX(10);
+        t.setCycleCount(4);
+        t.setAutoReverse(true);
+        t.play();
     }
 }

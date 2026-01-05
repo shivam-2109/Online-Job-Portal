@@ -5,36 +5,61 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-import java.io.IOException;
+import java.util.Stack;
 
 public class FXRouter {
-    public static void goToLogin(Stage stage) {
-        loadAndSet(stage, "/fxml/login.fxml", "WorkNearMe - Login");
+
+    private static Stage stage;
+    private static final Stack<Scene> history = new Stack<>();
+
+    // INITIAL SETUP
+    public static void setStage(Stage primaryStage) {
+        stage = primaryStage;
     }
 
-    public static void goToAdmin(Stage stage) {
-        loadAndSet(stage, "/fxml/admin_dashboard.fxml", "WorkNearMe - Admin");
+    public static void init(Stage primaryStage) {
+        setStage(primaryStage);
     }
 
-    public static void goToEmployer(Stage stage) {
-        loadAndSet(stage, "/fxml/employer_dashboard.fxml", "WorkNearMe - Employer");
-    }
-
-    public static void goToSeeker(Stage stage) {
-        loadAndSet(stage, "/fxml/jobseeker_dashboard.fxml", "WorkNearMe - JobSeeker");
-    }
-
-    private static void loadAndSet(Stage stage, String fxmlPath, String title) {
+    // LOAD BY FXML NAME
+    public static void goTo(String fxml) {
         try {
-            Parent root = FXMLLoader.load(FXRouter.class.getResource(fxmlPath));
-            Scene scene = new Scene(root);
-            scene.getStylesheets().add(FXRouter.class.getResource("/css/styles.css").toExternalForm());
-            stage.setScene(scene);
-            stage.setTitle(title);
-            stage.setResizable(false);
+            Parent root = FXMLLoader.load(
+                    FXRouter.class.getResource("/fxml/" + fxml + ".fxml")
+            );
+
+            Scene newScene = new Scene(root);
+
+            if (stage.getScene() != null) {
+                history.push(stage.getScene());
+            }
+
+            stage.setScene(newScene);
             stage.show();
-        } catch (IOException e) {
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    // 🔥 THIS METHOD WAS MISSING (FIX)
+    public static void goBack() {
+        if (!history.isEmpty()) {
+            stage.setScene(history.pop());
+            stage.show();
+        }
+    }
+
+    // OPTIONAL SHORTCUTS (KEEP IF YOU USE THEM)
+    public static void goToAdmin() {
+        goTo("admin_dashboard");
+    }
+
+    public static void goToEmployer() {
+        goTo("employer_dashboard");
+    }
+
+    public static void goToJobSeeker() {
+        goTo("jobseeker_dashboard");
     }
 }

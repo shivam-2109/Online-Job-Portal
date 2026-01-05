@@ -2,20 +2,16 @@ package com.labouriq.controllers;
 
 import com.labouriq.dao.JobDAO;
 import com.labouriq.model.Job;
+import com.labouriq.util.Session;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
+
+import java.util.List;
 
 public class EmployerController {
 
-    @FXML private StackPane contentPane;
     @FXML private TableView<Job> jobsTable;
     @FXML private Label jobCountLabel;
-    @FXML private Button newJobButton;
 
     private final JobDAO jobDAO = new JobDAO();
 
@@ -24,63 +20,64 @@ public class EmployerController {
         loadJobs();
     }
 
-    private void loadJobs() {
-        // TODO: replace demo employer id with logged-in employer id
-        int demoEmployerId = 2;
+    private void showError(String msg) {
+        new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK).showAndWait();
+    }
 
+
+    private void loadJobs() {
         try {
-            var jobs = jobDAO.findByEmployerId(demoEmployerId);
+            List<Job> jobs = jobDAO.findByEmployer(Session.getUserId());
             jobsTable.getItems().setAll(jobs);
             jobCountLabel.setText(jobs.size() + " jobs");
         } catch (Exception e) {
             e.printStackTrace();
-            jobCountLabel.setText("0 jobs");
         }
     }
 
+    // REQUIRED BY FXML
+    @FXML
+    private void showJobs() {
+        loadJobs();
+    }
+
+    // REQUIRED BY FXML
+    @FXML
+    private void showApplications() {
+        FXRouter.goTo("applications");
+    }
+
+    // REQUIRED BY FXML
     @FXML
     private void onNewJob() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/post_job.fxml"));
-            Parent root = loader.load();
-
-            // Get controller & inject employer ID
-            PostJobController ctrl = loader.getController();
-            int demoEmployerId = 2;   // Replace with session user later
-            ctrl.setEmployerId(demoEmployerId);
-
-            Stage stage = new Stage();
-            stage.setTitle("Post Job - WorkNearMe");
-
-            Scene scene = new Scene(root);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-            stage.setScene(scene);
-            stage.initOwner(contentPane.getScene().getWindow());
-            stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-            stage.showAndWait();
-
-            // Refresh table after posting job
-            loadJobs();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            Alert a = new Alert(Alert.AlertType.ERROR,
-                    "Unable to open Post Job window: " + e.getMessage(),
-                    ButtonType.OK);
-            a.showAndWait();
-        }
+        FXRouter.goTo("post_job");
     }
 
     @FXML
     private void onLogout() {
-        Stage stage = (Stage) contentPane.getScene().getWindow();
-        FXRouter.goToLogin(stage);
+        Session.logout();
+        FXRouter.goTo("login");
     }
 
-    // Placeholder navigation functions (to implement later)
-    @FXML private void showJobs() {}
-    @FXML private void showPostJob() {}
-    @FXML private void showApplications() {}
-    @FXML private void showMessages() {}
-    @FXML private void showStats() {}
+    @FXML
+    private void showPostJob() {
+        try {
+            FXRouter.goTo("post_job");
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Unable to open Post Job page");
+        }
+    }
+
+    @FXML
+    private void showMessages() {
+        try {
+            FXRouter.goTo("messages");
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Unable to open messages");
+        }
+    }
+
+
 }

@@ -1,67 +1,105 @@
 package com.labouriq.dao;
 
-import com.labouriq.db.DBConnection;
 import com.labouriq.model.Job;
+import com.labouriq.util.DBConnection;
 
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class JobDAO {
 
-    public Job create(Job j) throws SQLException {
-        String sql = "INSERT INTO jobs (employer_id, title, description, location, salary, status, created_at) VALUES (?,?,?,?,?,?,?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, j.getEmployerId());
-            ps.setString(2, j.getTitle());
-            ps.setString(3, j.getDescription());
-            ps.setString(4, j.getLocation());
-            ps.setString(5, j.getSalary());
-            ps.setString(6, j.getStatus() == null ? "OPEN" : j.getStatus());
-            ps.setString(7, j.getCreatedAt() == null ? LocalDateTime.now().toString() : j.getCreatedAt().toString());
+    public void create(Job job) throws Exception {
+        String sql = """
+            INSERT INTO jobs (employer_id, title, location, salary, description)
+            VALUES (?, ?, ?, ?, ?)
+        """;
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, job.getEmployerId());
+            ps.setString(2, job.getTitle());
+            ps.setString(3, job.getLocation());
+            ps.setString(4, job.getSalary());
+            ps.setString(5, job.getDescription());
             ps.executeUpdate();
-            ResultSet rs = ps.getGeneratedKeys();
-            if (rs.next()) j.setId(rs.getInt(1));
         }
-        return j;
     }
 
-    public List<Job> findByEmployerId(int employerId) throws SQLException {
+    public List<Job> findByEmployer(int employerId) throws Exception {
         List<Job> list = new ArrayList<>();
+
         String sql = "SELECT * FROM jobs WHERE employer_id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setInt(1, employerId);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(mapRow(rs));
+
+            while (rs.next()) {
+                Job job = new Job();
+                job.setId(rs.getInt("id"));
+                job.setEmployerId(employerId);
+                job.setTitle(rs.getString("title"));
+                job.setLocation(rs.getString("location"));
+                job.setSalary(rs.getString("salary"));
+                job.setDescription(rs.getString("description"));
+                job.setStatus(rs.getString("status"));
+                list.add(job);
+            }
         }
         return list;
     }
 
-    public List<Job> findAll() throws SQLException {
-        List<Job> list = new ArrayList<>();
-        String sql = "SELECT * FROM jobs ORDER BY created_at DESC";
-        try (Connection conn = DBConnection.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) list.add(mapRow(rs));
+    public List<Job> findAllOpenJobs() throws Exception {
+        List<Job> jobs = new ArrayList<>();
+
+        String sql = "SELECT * FROM jobs WHERE status = 'OPEN'";
+
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Job job = new Job();
+                job.setId(rs.getInt("id"));
+                job.setEmployerId(rs.getInt("employer_id"));
+                job.setTitle(rs.getString("title"));
+                job.setLocation(rs.getString("location"));
+                job.setSalary(rs.getString("salary"));
+                job.setDescription(rs.getString("description"));
+                job.setStatus(rs.getString("status"));
+                jobs.add(job);
+            }
         }
-        return list;
+        return jobs;
     }
 
-    private Job mapRow(ResultSet rs) throws SQLException {
-        Job j = new Job();
-        j.setId(rs.getInt("id"));
-        j.setEmployerId(rs.getInt("employer_id"));
-        j.setTitle(rs.getString("title"));
-        j.setDescription(rs.getString("description"));
-        j.setLocation(rs.getString("location"));
-        j.setSalary(rs.getString("salary"));
-        j.setStatus(rs.getString("status"));
-        String created = rs.getString("created_at");
-        if (created != null) j.setCreatedAt(LocalDateTime.parse(created));
-        return j;
+    public int countActiveJobs(int employerId) throws Exception {
+        String sql = "SELECT COUNT(*) FROM jobs WHERE employer_id=? AND status='OPEN'";
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, employerId);
+            ResultSet rs = ps.executeQuery();
+            return rs.next() ? rs.getInt(1) : 0;
+        }
     }
+
+    public int countApplicants(int employerId) throws Exception {
+        String sql = """
+        SELECT COUNT(*) 
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        WHERE j.employer_id=?
+    """;
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, employerId);
+            ResultSet rs = ps.executeQuery();
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
 }

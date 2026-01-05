@@ -1,48 +1,65 @@
 package com.labouriq.controllers;
 
-import com.labouriq.dao.UserDAO;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableView;
 import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
 
 public class AdminController {
 
-    @FXML private StackPane contentPane;
     @FXML private Label totalUsersLabel;
     @FXML private Label totalJobsLabel;
     @FXML private TableView<?> activityTable;
-
-    private final UserDAO userDAO = new UserDAO();
+    @FXML private StackPane contentPane;
 
     @FXML
     public void initialize() {
-        loadSummary();
-        // load recent activity placeholder (can be wired to DB later)
+        totalUsersLabel.setText("8,420");
+        totalJobsLabel.setText("1,205");
     }
 
-    private void loadSummary() {
-        try {
-            int users = userDAO.findAll().size();
-            totalUsersLabel.setText(String.valueOf(users));
-            // For jobs count use a JobDAO (not included here) - placeholder
-            totalJobsLabel.setText("—"); // replace with JobDAO.findAll().size()
-        } catch (Exception e) {
-            e.printStackTrace();
-            totalUsersLabel.setText("0");
-        }
+    // ================= NAVIGATION =================
+
+    @FXML
+    private void showDashboard() {
+        contentPane.getChildren().clear();
+    }
+
+    @FXML
+    private void showUsers() {
+        loadPage("/fxml/admin_users.fxml");
+    }
+
+    @FXML
+    private void showPendingJobs() {
+        loadPage("/fxml/admin_jobs.fxml");
+    }
+
+    @FXML
+    private void showReports() {
+        loadPage("/fxml/admin_reports.fxml");
+    }
+
+    @FXML
+    private void showSettings() {
+        System.out.println("Settings clicked");
     }
 
     @FXML
     private void onLogout() {
-        // return to login screen
-        Stage stage = (Stage) contentPane.getScene().getWindow();
-        FXRouter.goToLogin(stage);
+        FXRouter.goTo("login");
     }
 
-    @FXML private void showDashboard() { /* content switching if needed */ }
-    @FXML private void showUsers() { /* load user management UI - later */ }
-    @FXML private void showPendingJobs() { /* load pending jobs UI - later */ }
-    @FXML private void showSettings() { /* settings UI */ }
-    @FXML private void showReports() { /* reports UI */ }
+    // ================= HELPER =================
+    private void loadPage(String fxmlPath) {
+        try {
+            Parent view =
+                    FXMLLoader.load(getClass().getResource(fxmlPath));
+            contentPane.getChildren().setAll(view);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
